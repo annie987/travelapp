@@ -1,0 +1,36 @@
+# Build and dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Expo specific
+.expo/
+.expo-shared/
+
+# Metro bundler
+.metro-health-check*
+
+# TypeScript
+*.tsbuildinfo
+
+# macOS
+.DS_Store
+*.pem
+
+# iOS / Android
+*.p12
+*.key
+*.mobileprovision
+*.xcuserstate
+*.xcworkspace/
+*.xcodeproj/
+android/
+ios/
+
+# Env files
+.env*.local
+.env
+
+# Example / test apps
+app-example/

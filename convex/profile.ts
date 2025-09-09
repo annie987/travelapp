@@ -1,0 +1,37 @@
+import { v } from "convex/values";
+import { mutation, query } from "./_generated/server";
+
+// Fetch the user's profile image
+export const getProfileImage = query({
+  args: { clerkId: v.string() },
+  handler: async (ctx, { clerkId }) => {
+    const user = await ctx.db.query("users")
+      .withIndex("by_clerk_id", q => q.eq("clerkId", clerkId))
+      .first();
+    
+    if (!user || !user.imageId) return null;
+
+    return { storageId: user.imageId };
+  },
+});
+
+// Update the user's profile image
+export const updateProfileImage = mutation({
+  args: { storageId: v.string() },
+  handler: async (ctx, { storageId }) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not signed in");
+
+    const user = await ctx.db.query("users")
+      .withIndex("by_clerk_id", q => q.eq("clerkId", identity.subject))
+      .first();
+    
+    if (!user) throw new Error("User not found");
+
+    await ctx.db.patch(user._id, { imageId: storageId });
+    return { success: true };
+  },
+});
+
+
+
