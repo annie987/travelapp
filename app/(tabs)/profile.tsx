@@ -12,7 +12,7 @@ export default function Profile() {
 
   // Mutations
   const generateUploadUrl = useMutation(api.bucketlist.generateUploadUrl);
-  const saveItemImage = useMutation(api.bucketlist.saveItemImage);
+  const saveItemImage = useMutation(api.profile.saveItemImage);
   const updateProfileImage = useMutation(api.profile.updateProfileImage);
 
   // State

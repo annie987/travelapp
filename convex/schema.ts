@@ -10,6 +10,8 @@ export default defineSchema({
         posts: v.optional(v.string()),
         clerkId: v.string(),
         storageId: v.optional(v.string()), // add this
+        photoUrl: v.optional(v.string()), // ✅ Add this line
+
 
     }).index("by_clerk_id", ["clerkId"]),
 
