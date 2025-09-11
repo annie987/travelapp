@@ -38,18 +38,3 @@ export const syncUser = mutation({
 });
 
 
-export const saveAvatar = mutation(
-  async (ctx, { storageId, photoUrl }: { storageId: string; photoUrl?: string }) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("unauthorized");
-
-    const user = await ctx.db.query("users")
-      .withIndex("by_clerk_id", q => q.eq("clerkId", identity.subject))
-      .first();
-
-    if (!user) throw new Error("User not found");
-
-    // Update the user's avatar in the users table
-    return await ctx.db.patch(user._id, { storageId, image: photoUrl });
-  }
-);

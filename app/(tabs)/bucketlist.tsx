@@ -6,19 +6,17 @@ import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
   FlatList,
-  KeyboardAvoidingView,
   Modal,
-  Platform,
   ScrollView,
   Text,
   TextInput,
   TouchableOpacity,
   View,
-  StyleSheet,
 } from "react-native";
 import MapView, { Marker } from "react-native-maps";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
 import { api } from "../../convex/_generated/api";
+import { styles } from "@/styles/auth.styles";
 
 export default function BucketList() {
   const { user } = useUser();
@@ -49,7 +47,6 @@ export default function BucketList() {
   const [locationLng, setLocationLng] = useState<number | null>(null);
   const [mapPickerVisible, setMapPickerVisible] = useState(false);
 
-  // Handle form actions
   const handleAdd = async () => {
     if (!title.trim()) return;
 
@@ -99,12 +96,10 @@ export default function BucketList() {
   ];
 
   return (
-    <View style={{ flex: 1, backgroundColor: "#f3f4f6" }}>
-      <ScrollView style={{ padding: 16 }}>
-        {/* Header */}
-
+    <View style={styles.container}>
+      <ScrollView style={styles.scrollContainer}>
         {/* Dashboard Cards */}
-        <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 16 }}>
+        <View style={styles.cardRow}>
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Completed</Text>
             <Text style={styles.cardValue}>{completedCount}</Text>
@@ -133,19 +128,17 @@ export default function BucketList() {
               />
               <View style={{ flex: 1, marginLeft: 10 }}>
                 <Text
-                  style={{
-                    color: "#003366",
-                    fontWeight: "bold",
-                    fontSize: 16,
-                    textDecorationLine: item.completed ? "line-through" : "none",
-                  }}
+                  style={[
+                    styles.listItemTitle,
+                    item.completed && { textDecorationLine: "line-through" },
+                  ]}
                 >
                   {item.title}
                 </Text>
-                {item.description && <Text style={{ color: "#0059b3" }}>{item.description}</Text>}
-                {item.category && <Text style={{ color: "#004080", fontSize: 13 }}>Category: {item.category}</Text>}
-                {item.location && <Text style={{ color: "#004080", fontSize: 13 }}>Location: {item.location}</Text>}
-                {item.plannedDate && <Text style={{ color: "#004080", fontSize: 13 }}>Planned Date: {item.plannedDate}</Text>}
+                {item.description && <Text style={styles.listItemDescription}>{item.description}</Text>}
+                {item.category && <Text style={styles.detailText}>Category: {item.category}</Text>}
+                {item.location && <Text style={styles.detailText}>Location: {item.location}</Text>}
+                {item.plannedDate && <Text style={styles.detailText}>Planned Date: {item.plannedDate}</Text>}
               </View>
               <TouchableOpacity onPress={() => handleDelete(item._id)} style={styles.trashButton}>
                 <Fontisto name="trash" size={20} color="#fff" />
@@ -168,8 +161,8 @@ export default function BucketList() {
         <View style={styles.formPanel}>
           <ScrollView keyboardShouldPersistTaps="handled">
             {formFields.map(field => (
-              <View key={field.label} style={{ marginBottom: 12 }}>
-                <Text style={{ color: "#003366", fontWeight: "600", marginBottom: 4 }}>{field.label}</Text>
+              <View key={field.label} style={styles.formRow}>
+                <Text style={styles.label}>{field.label}</Text>
                 {field.label === "Planned Date" ? (
                   <>
                     <TouchableOpacity
@@ -208,7 +201,7 @@ export default function BucketList() {
               </Text>
             </TouchableOpacity>
 
-            <TouchableOpacity onPress={handleAdd} style={[styles.button, { backgroundColor: "#003366" }]}>
+            <TouchableOpacity onPress={handleAdd} style={styles.button}>
               <Text style={styles.buttonText}>Add Item</Text>
             </TouchableOpacity>
           </ScrollView>
@@ -233,80 +226,10 @@ export default function BucketList() {
         >
           {locationLat && locationLng && <Marker coordinate={{ latitude: locationLat, longitude: locationLng }} />}
         </MapView>
-        <TouchableOpacity style={{ padding: 15, backgroundColor: "#003366" }} onPress={() => setMapPickerVisible(false)}>
-          <Text style={{ color: "#fff", textAlign: "center" }}>Done</Text>
+        <TouchableOpacity style={styles.mapDoneButton} onPress={() => setMapPickerVisible(false)}>
+          <Text style={styles.mapDoneText}>Done</Text>
         </TouchableOpacity>
       </Modal>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  card: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 16,
-    width: "30%",
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  cardTitle: { fontSize: 14, color: "#6b7280", marginBottom: 8 },
-  cardValue: { fontSize: 20, fontWeight: "bold", color: "#111827" },
-  listItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#cce0ff",
-    padding: 15,
-    marginBottom: 12,
-    borderRadius: 12,
-  },
-  trashButton: {
-    backgroundColor: "#003366",
-    padding: 10,
-    borderRadius: 8,
-    marginLeft: 10,
-  },
-  floatingButton: {
-    position: "absolute",
-    bottom: 30,
-    right: 20,
-    backgroundColor: "#003366",
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    justifyContent: "center",
-    alignItems: "center",
-    elevation: 6,
-  },
-  formPanel: {
-    position: "absolute",
-    bottom: 80,
-    left: 16,
-    right: 16,
-    backgroundColor: "#fff",
-    borderRadius: 16,
-    padding: 16,
-    maxHeight: "70%",
-    shadowColor: "#000",
-    shadowOpacity: 0.2,
-    shadowOffset: { width: 0, height: 4 },
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  input: {
-    padding: 12,
-    borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 8,
-  },
-  button: {
-    padding: 14,
-    borderRadius: 12,
-    alignItems: "center",
-  },
-  buttonText: { color: "#fff", fontWeight: "600" },
-});

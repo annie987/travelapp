@@ -2,7 +2,7 @@ import { useAuth, useUser } from "@clerk/clerk-expo";
 import { Feather } from "@expo/vector-icons";
 import { useQuery, useMutation } from "convex/react";
 import * as ImagePicker from "expo-image-picker";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { ActivityIndicator, FlatList, Image, Text, TouchableOpacity, View } from "react-native";
 import { api } from "../../convex/_generated/api";
 
@@ -10,19 +10,24 @@ export default function Profile() {
   const { signOut } = useAuth();
   const { user, isLoaded } = useUser();
 
+  // Mutations
   const generateUploadUrl = useMutation(api.bucketlist.generateUploadUrl);
   const saveItemImage = useMutation(api.bucketlist.saveItemImage);
-  const updateProfileImage = useMutation(api.profile.updateProfileImage); // ✅ Added this line
+  const updateProfileImage = useMutation(api.profile.updateProfileImage);
 
+  // State
   const [avatar, setAvatar] = useState<string | null>(null);
   const [itemImages, setItemImages] = useState<{ [key: string]: string }>({});
 
+  // Queries
   const completedItems = useQuery(api.bucketlist.completedItems, { clerkId: user?.id ?? "" }) ?? [];
   const allItems = useQuery(api.bucketlist.listBucketListItems, { clerkId: user?.id ?? "" }) ?? [];
+
 
   if (!isLoaded) return <ActivityIndicator size="large" style={{ flex: 1 }} />;
   if (!user) return <Text>No user signed in</Text>;
 
+  // Upload avatar
   const handleAvatarUpload = async () => {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
@@ -32,23 +37,23 @@ export default function Profile() {
         quality: 1,
       });
       if (result.canceled) return;
-  
+
       const fileUri = result.assets[0].uri;
       setAvatar(fileUri);
-  
+
       const uploadUrl = await generateUploadUrl();
       const blob = await fetch(fileUri).then(res => res.blob());
-  
+
       await fetch(uploadUrl, { method: "POST", headers: { "Content-Type": blob.type }, body: blob });
-  
+
       const storageId = uploadUrl.split("?")[0].split("/").pop();
-      await updateProfileImage({ storageId});
+      await updateProfileImage({ storageId, photoUrl: fileUri });
     } catch (error) {
       console.error("Error uploading avatar:", error);
     }
   };
-  
 
+  // Upload item image
   const handleItemUpload = async (itemId: string) => {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
@@ -76,16 +81,15 @@ export default function Profile() {
 
   return (
     <View style={{ flex: 1, backgroundColor: "#f3f4f6", padding: 16 }}>
-      {/* Top Row: Sign Out */}
+      {/* Sign Out */}
       <View style={{ flexDirection: "row", justifyContent: "flex-end", marginBottom: 20 }}>
         <TouchableOpacity onPress={() => signOut()}>
           <Text style={{ fontWeight: "600", fontSize: 16, color: "#111827" }}>Sign out</Text>
         </TouchableOpacity>
       </View>
 
-      {/* Avatar + Completed */}
+      {/* Avatar + Completed Stats */}
       <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 20 }}>
-        {/* Avatar */}
         <TouchableOpacity
           onPress={handleAvatarUpload}
           style={{
@@ -97,7 +101,7 @@ export default function Profile() {
             alignItems: "center",
             overflow: "hidden",
             marginRight: 16,
-            marginTop: -20, // lift avatar up
+            marginTop: -20,
           }}
         >
           {avatar ? (
@@ -107,30 +111,15 @@ export default function Profile() {
           )}
         </TouchableOpacity>
 
-        {/* Completed */}
         <View style={{ flex: 1 }}>
-          <Text
-            style={{
-              fontWeight: "700",
-              fontSize: 16,
-              color: "#b45309",
-              flexWrap: "wrap",
-            }}
-          >
+          <Text style={{ fontWeight: "700", fontSize: 16, color: "#b45309", flexWrap: "wrap" }}>
             {completedItems.length} out of {allItems.length} experiences complete
           </Text>
         </View>
       </View>
 
       {/* Greeting */}
-      <Text
-        style={{
-          fontWeight: "bold",
-          fontSize: 24, // bigger font
-          color: "#111827",
-          marginBottom: 16,
-        }}
-      >
+      <Text style={{ fontWeight: "bold", fontSize: 24, color: "#111827", marginBottom: 16 }}>
         Hello, {user.fullName} 👋
       </Text>
 
@@ -160,8 +149,6 @@ export default function Profile() {
             {item.location && (
               <Text style={{ color: "#6b7280", marginBottom: 8, fontSize: 12 }}>{item.location}</Text>
             )}
-
-            {/* Image clickable for editing */}
             <TouchableOpacity onPress={() => handleItemUpload(item._id)}>
               <Image
                 source={{ uri: itemImages[item._id] || item.photoUrl }}

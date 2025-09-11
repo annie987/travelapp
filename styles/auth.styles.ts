@@ -1,22 +1,20 @@
-import { COLORS } from "@/constants/theme";
+// auth.styles.ts
 import { Dimensions, StyleSheet } from "react-native";
+import { COLORS } from "@/constants/theme";
 
-const { width, height } = Dimensions.get("window");
+const { width } = Dimensions.get("window");
 
 export const styles = StyleSheet.create({
+  // General container
   container: {
     flex: 1,
     backgroundColor: COLORS.neutral,
+  },
+  scrollContainer: {
     padding: 16,
   },
-  input: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: "#ddd",
-    padding: 12,
-    borderRadius: 8,
-    backgroundColor: COLORS.neutral,
-  },
+
+  // Buttons
   button: {
     backgroundColor: COLORS.primary,
     padding: 14,
@@ -29,7 +27,11 @@ export const styles = StyleSheet.create({
     fontWeight: "600",
     fontSize: 16,
   },
+
+  // List items (shared)
   listItem: {
+    flexDirection: "row",
+    alignItems: "center",
     backgroundColor: COLORS.surface,
     padding: 16,
     borderRadius: 12,
@@ -49,6 +51,11 @@ export const styles = StyleSheet.create({
   listItemDescription: {
     color: COLORS.textLow,
     fontSize: 14,
+  },
+  detailText: {
+    fontSize: 14,
+    color: COLORS.textLow,
+    marginTop: 2,
   },
 
   // Brand / login section
@@ -111,47 +118,60 @@ export const styles = StyleSheet.create({
     textAlign: "center",
     marginTop: 12,
   },
-});
 
-// Specific bucket list styles
-export const bucketListStyles = StyleSheet.create({
+  // 🔹 Bucket List specific
+  cardRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 16,
+  },
+  card: {
+    backgroundColor: COLORS.surface,
+    borderRadius: 12,
+    padding: 16,
+    width: "30%",
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  cardTitle: { fontSize: 14, color: COLORS.textLow, marginBottom: 8 },
+  cardValue: { fontSize: 20, fontWeight: "bold", color: COLORS.textHigh },
+
+  trashButton: {
+    backgroundColor: COLORS.primary,
+    padding: 10,
+    borderRadius: 8,
+    marginLeft: 10,
+  },
   floatingButton: {
     position: "absolute",
     bottom: 30,
-    right: 30,
+    right: 20,
     backgroundColor: COLORS.primary,
     width: 60,
     height: 60,
     borderRadius: 30,
     justifyContent: "center",
     alignItems: "center",
-    shadowColor: "#000",
-    shadowOpacity: 0.3,
-    shadowOffset: { width: 0, height: 5 },
-    shadowRadius: 5,
-    elevation: 5,
-  },
-  trashButton: {
-    backgroundColor: COLORS.primary,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  formContainer: {
-    position: "absolute",
-    bottom: 100,
-    left: 20,
-    right: 20,
-    backgroundColor: COLORS.surface,
-    padding: 20,
-    borderRadius: 16,
-    shadowColor: "#000",
-    shadowOpacity: 0.3,
-    shadowOffset: { width: 0, height: 5 },
-    shadowRadius: 5,
     elevation: 6,
+  },
+  formPanel: {
+    position: "absolute",
+    bottom: 80,
+    left: 16,
+    right: 16,
+    backgroundColor: COLORS.surface,
+    borderRadius: 16,
+    padding: 16,
+    maxHeight: "70%",
+    shadowColor: "#000",
+    shadowOpacity: 0.2,
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 8,
+    elevation: 8,
   },
   formRow: {
     marginBottom: 12,
@@ -172,10 +192,13 @@ export const bucketListStyles = StyleSheet.create({
     fontStyle: "italic",
   },
 
-  detailText: {
-    fontSize: 14,
-    color: COLORS.textLow,
-    marginTop: 2,
+  // Map modal
+  mapDoneButton: {
+    padding: 15,
+    backgroundColor: COLORS.primary,
   },
-  
+  mapDoneText: {
+    color: "#fff",
+    textAlign: "center",
+  },
 });
