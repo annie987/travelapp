@@ -12,8 +12,9 @@ export default function Profile() {
 
   const generateUploadUrl = useMutation(api.bucketlist.generateUploadUrl);
   const saveItemImage = useMutation(api.bucketlist.saveItemImage);
+  const updateProfileImage = useMutation(api.profile.updateProfileImage); // ✅ Added this line
 
-  const [avatar, setAvatar] = useState<string | null>(user?.image ?? null);
+  const [avatar, setAvatar] = useState<string | null>(null);
   const [itemImages, setItemImages] = useState<{ [key: string]: string }>({});
 
   const completedItems = useQuery(api.bucketlist.completedItems, { clerkId: user?.id ?? "" }) ?? [];
@@ -31,21 +32,22 @@ export default function Profile() {
         quality: 1,
       });
       if (result.canceled) return;
-
+  
       const fileUri = result.assets[0].uri;
       setAvatar(fileUri);
-
+  
       const uploadUrl = await generateUploadUrl();
       const blob = await fetch(fileUri).then(res => res.blob());
-
+  
       await fetch(uploadUrl, { method: "POST", headers: { "Content-Type": blob.type }, body: blob });
-
+  
       const storageId = uploadUrl.split("?")[0].split("/").pop();
-      await saveItemImage({ itemId: "", storageId, photoUrl: fileUri });
+      await updateProfileImage({ storageId});
     } catch (error) {
       console.error("Error uploading avatar:", error);
     }
   };
+  
 
   const handleItemUpload = async (itemId: string) => {
     try {
