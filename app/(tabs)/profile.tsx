@@ -16,13 +16,20 @@ export default function Profile() {
   const updateProfileImage = useMutation(api.profile.updateProfileImage);
 
   // State
-  const [avatar, setAvatar] = useState<string | null>(null);
+  const [avatar, setAvatar] = useState<{ [key: string]: string }>({});
   const [itemImages, setItemImages] = useState<{ [key: string]: string }>({});
 
   // Queries
   const completedItems = useQuery(api.bucketlist.completedItems, { clerkId: user?.id ?? "" }) ?? [];
   const allItems = useQuery(api.bucketlist.listBucketListItems, { clerkId: user?.id ?? "" }) ?? [];
+  const userProfile = useQuery(api.profile.getProfileImage, { clerkId: user?.id ?? "" });
 
+
+  useEffect(() => {
+    if (userProfile?.photoUrl) {
+      setAvatar(userProfile.photoUrl);
+    }
+  }, [userProfile]);
 
   if (!isLoaded) return <ActivityIndicator size="large" style={{ flex: 1 }} />;
   if (!user) return <Text>No user signed in</Text>;
@@ -47,7 +54,7 @@ export default function Profile() {
       await fetch(uploadUrl, { method: "POST", headers: { "Content-Type": blob.type }, body: blob });
 
       const storageId = uploadUrl.split("?")[0].split("/").pop();
-      await updateProfileImage({ storageId, photoUrl: fileUri });
+      await updateProfileImage({storageId, photoUrl: fileUri });
     } catch (error) {
       console.error("Error uploading avatar:", error);
     }
