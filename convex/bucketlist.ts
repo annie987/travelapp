@@ -1,12 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 
-// Generate a signed upload URL
-export const generateUploadUrl = mutation(async (ctx) => {
-  const identity = await ctx.auth.getUserIdentity();
-  if (!identity) throw new Error("unauthorized");
-  return await ctx.storage.generateUploadUrl();
-});
 
 // Create a new bucket list item for a Clerk user
 export const createBucketListItem = mutation({

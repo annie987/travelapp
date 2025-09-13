@@ -1,3 +1,4 @@
+// ===== PROFILE COMPONENT (Profile.tsx) =====
 import { useAuth, useUser } from "@clerk/clerk-expo";
 import { Feather } from "@expo/vector-icons";
 import { useQuery, useMutation } from "convex/react";
@@ -10,87 +11,142 @@ export default function Profile() {
   const { signOut } = useAuth();
   const { user, isLoaded } = useUser();
 
+  // -------------------------
   // Mutations
-  const generateUploadUrl = useMutation(api.bucketlist.generateUploadUrl);
-  const saveItemImage = useMutation(api.profile.saveItemImage);
-  const updateProfileImage = useMutation(api.profile.updateProfileImage);
+  // -------------------------
+  const generateUploadUrl = useMutation(api.profile.generateUploadUrl);
 
+  const updateProfileImageMutation = useMutation(api.profile.updateProfileImage, {
+    onSuccess: (permanentUrl) => {
+      setAvatar(permanentUrl);
+      api.profile.getProfileImage.invalidate({ clerkId: user?.id });
+    },
+  });
+
+  const saveItemImageMutation = useMutation(api.profile.saveItemImage, {
+    onSuccess: (permanentUrl, { itemId }) => {
+      setItemImages((prev) => ({ ...prev, [itemId]: permanentUrl }));
+      api.bucketlist.listBucketListItems.invalidate({ clerkId: user?.id });
+    },
+  });
+
+  // -------------------------
   // State
-  const [avatar, setAvatar] = useState<{ [key: string]: string }>({});
+  // -------------------------
+  const [avatar, setAvatar] = useState<string>("");
   const [itemImages, setItemImages] = useState<{ [key: string]: string }>({});
+  const [uploading, setUploading] = useState(false);
 
+  // -------------------------
   // Queries
+  // -------------------------
   const completedItems = useQuery(api.bucketlist.completedItems, { clerkId: user?.id ?? "" }) ?? [];
   const allItems = useQuery(api.bucketlist.listBucketListItems, { clerkId: user?.id ?? "" }) ?? [];
   const userProfile = useQuery(api.profile.getProfileImage, { clerkId: user?.id ?? "" });
 
-
+  // Set initial avatar from query
   useEffect(() => {
-    if (userProfile?.photoUrl) {
-      setAvatar(userProfile.photoUrl);
+    if (userProfile?.image) {
+      setAvatar(userProfile.image);
     }
-  }, [userProfile]);
+  }, [userProfile?.image]);
 
   if (!isLoaded) return <ActivityIndicator size="large" style={{ flex: 1 }} />;
   if (!user) return <Text>No user signed in</Text>;
 
-  // Upload avatar
+  // -------------------------
+  // Handlers
+  // -------------------------
   const handleAvatarUpload = async () => {
     try {
+      setUploading(true);
+
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         aspect: [1, 1],
-        quality: 1,
+        quality: 0.8,
       });
+
       if (result.canceled) return;
 
       const fileUri = result.assets[0].uri;
-      setAvatar(fileUri);
+      setAvatar(fileUri); // immediate feedback
+      console.log("1. Selected file:", fileUri);
 
       const uploadUrl = await generateUploadUrl();
-      const blob = await fetch(fileUri).then(res => res.blob());
+      console.log("2. Upload URL:", uploadUrl);
 
-      await fetch(uploadUrl, { method: "POST", headers: { "Content-Type": blob.type }, body: blob });
+      const formData = new FormData();
+      formData.append("file", {
+        uri: fileUri,
+        type: result.assets[0].mimeType || "image/jpeg",
+        name: result.assets[0].fileName || `avatar_${Date.now()}.jpg`,
+      } as any);
 
-      const storageId = uploadUrl.split("?")[0].split("/").pop();
-      await updateProfileImage({storageId, photoUrl: fileUri });
-    } catch (error) {
-      console.error("Error uploading avatar:", error);
+      const uploadResponse = await fetch(uploadUrl, { method: "POST", body: formData });
+      if (!uploadResponse.ok) throw new Error(`Upload failed: ${uploadResponse.statusText}`);
+
+      const { storageId } = await uploadResponse.json();
+      console.log("3. Storage ID:", storageId);
+
+      // Update profile with permanent URL
+      const permanentUrl = await updateProfileImageMutation({ storageId });
+      console.log("4. Permanent URL:", permanentUrl);
+
+    } catch (err) {
+      console.error("Error uploading avatar:", err);
+      if (userProfile?.image) setAvatar(userProfile.image); // revert
+    } finally {
+      setUploading(false);
     }
   };
 
-  // Upload item image
   const handleItemUpload = async (itemId: string) => {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         aspect: [1, 1],
-        quality: 1,
+        quality: 0.8,
       });
+
       if (result.canceled) return;
 
       const fileUri = result.assets[0].uri;
-      setItemImages(prev => ({ ...prev, [itemId]: fileUri }));
+      setItemImages((prev) => ({ ...prev, [itemId]: fileUri }));
 
       const uploadUrl = await generateUploadUrl();
-      const blob = await fetch(fileUri).then(res => res.blob());
 
-      await fetch(uploadUrl, { method: "POST", headers: { "Content-Type": blob.type }, body: blob });
+      const formData = new FormData();
+      formData.append("file", {
+        uri: fileUri,
+        type: result.assets[0].mimeType || "image/jpeg",
+        name: result.assets[0].fileName || `item_${Date.now()}.jpg`,
+      } as any);
 
-      const storageId = uploadUrl.split("?")[0].split("/").pop();
-      await saveItemImage({ itemId, storageId, photoUrl: fileUri });
-    } catch (error) {
-      console.error("Error uploading item image:", error);
+      const uploadResponse = await fetch(uploadUrl, { method: "POST", body: formData });
+      if (!uploadResponse.ok) throw new Error(`Upload failed: ${uploadResponse.statusText}`);
+
+      const { storageId } = await uploadResponse.json();
+      console.log(`Item ${itemId} storageId:`, storageId);
+
+      const permanentUrl = await saveItemImageMutation({ itemId, storageId });
+      console.log(`Item ${itemId} permanent URL:`, permanentUrl);
+
+    } catch (err) {
+      console.error("Error uploading item image:", err);
     }
   };
 
+  // -------------------------
+  // Render
+  // -------------------------
   return (
     <View style={{ flex: 1, backgroundColor: "#f3f4f6", padding: 16 }}>
       {/* Sign Out */}
       <View style={{ flexDirection: "row", justifyContent: "flex-end", marginBottom: 20 }}>
-        <TouchableOpacity onPress={() => signOut()}>
+        <TouchableOpacity onPress={signOut}>
           <Text style={{ fontWeight: "600", fontSize: 16, color: "#111827" }}>Sign out</Text>
         </TouchableOpacity>
       </View>
@@ -99,6 +155,7 @@ export default function Profile() {
       <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 20 }}>
         <TouchableOpacity
           onPress={handleAvatarUpload}
+          disabled={uploading}
           style={{
             width: 110,
             height: 110,
@@ -109,9 +166,12 @@ export default function Profile() {
             overflow: "hidden",
             marginRight: 16,
             marginTop: -20,
+            opacity: uploading ? 0.6 : 1,
           }}
         >
-          {avatar ? (
+          {uploading ? (
+            <ActivityIndicator size="large" color="#6b7280" />
+          ) : avatar ? (
             <Image source={{ uri: avatar }} style={{ width: 110, height: 110, borderRadius: 55 }} />
           ) : (
             <Feather name="camera" size={28} color="#6b7280" />
@@ -157,10 +217,30 @@ export default function Profile() {
               <Text style={{ color: "#6b7280", marginBottom: 8, fontSize: 12 }}>{item.location}</Text>
             )}
             <TouchableOpacity onPress={() => handleItemUpload(item._id)}>
-              <Image
-                source={{ uri: itemImages[item._id] || item.photoUrl }}
-                style={{ width: "100%", aspectRatio: 1, borderRadius: 8, marginTop: 4 }}
-              />
+              {(itemImages[item._id] || item.photoUrl) ? (
+                <Image
+                  source={{ uri: itemImages[item._id] || item.photoUrl }}
+                  style={{ width: "100%", aspectRatio: 1, borderRadius: 8, marginTop: 4 }}
+                />
+              ) : (
+                <View
+                  style={{
+                    width: "100%",
+                    aspectRatio: 1,
+                    borderRadius: 8,
+                    marginTop: 4,
+                    backgroundColor: "#f3f4f6",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    borderWidth: 2,
+                    borderColor: "#e5e7eb",
+                    borderStyle: "dashed",
+                  }}
+                >
+                  <Feather name="camera" size={32} color="#9ca3af" />
+                  <Text style={{ color: "#9ca3af", marginTop: 8 }}>Add Photo</Text>
+                </View>
+              )}
             </TouchableOpacity>
           </View>
         )}
