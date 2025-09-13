@@ -3,7 +3,7 @@ import { useAuth, useUser } from "@clerk/clerk-expo";
 import { Feather } from "@expo/vector-icons";
 import { useQuery, useMutation } from "convex/react";
 import * as ImagePicker from "expo-image-picker";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { ActivityIndicator, FlatList, Image, Text, TouchableOpacity, View } from "react-native";
 import { api } from "../../convex/_generated/api";
 
@@ -35,21 +35,22 @@ export default function Profile() {
   // -------------------------
   const [avatar, setAvatar] = useState<string>("");
   const [itemImages, setItemImages] = useState<{ [key: string]: string }>({});
-  const [uploading, setUploading] = useState(false);
-
+  const [isUploading, setIsUploading] = useState(false);
+  const lastValidAvatar = useRef<string>(""); 
   // -------------------------
   // Queries
   // -------------------------
   const completedItems = useQuery(api.bucketlist.completedItems, { clerkId: user?.id ?? "" }) ?? [];
   const allItems = useQuery(api.bucketlist.listBucketListItems, { clerkId: user?.id ?? "" }) ?? [];
   const userProfile = useQuery(api.profile.getProfileImage, { clerkId: user?.id ?? "" });
+  console.log("User profile query result:", userProfile);
 
   // Set initial avatar from query
   useEffect(() => {
-    if (userProfile?.image) {
+    if (!isUploading && userProfile?.image && userProfile.image !== avatar) {
       setAvatar(userProfile.image);
     }
-  }, [userProfile?.image]);
+  }, [userProfile?.image, isUploading]);
 
   if (!isLoaded) return <ActivityIndicator size="large" style={{ flex: 1 }} />;
   if (!user) return <Text>No user signed in</Text>;
@@ -59,48 +60,49 @@ export default function Profile() {
   // -------------------------
   const handleAvatarUpload = async () => {
     try {
-      setUploading(true);
-
+      setIsUploading(true);
+  
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.8,
       });
-
+  
       if (result.canceled) return;
-
+  
       const fileUri = result.assets[0].uri;
-      setAvatar(fileUri); // immediate feedback
-      console.log("1. Selected file:", fileUri);
-
+      setAvatar(fileUri); // instant preview
+      lastValidAvatar.current = fileUri; // update last known good
+  
       const uploadUrl = await generateUploadUrl();
-      console.log("2. Upload URL:", uploadUrl);
-
+  
       const formData = new FormData();
       formData.append("file", {
         uri: fileUri,
         type: result.assets[0].mimeType || "image/jpeg",
         name: result.assets[0].fileName || `avatar_${Date.now()}.jpg`,
       } as any);
-
+  
       const uploadResponse = await fetch(uploadUrl, { method: "POST", body: formData });
       if (!uploadResponse.ok) throw new Error(`Upload failed: ${uploadResponse.statusText}`);
-
+  
       const { storageId } = await uploadResponse.json();
-      console.log("3. Storage ID:", storageId);
-
+  
       // Update profile with permanent URL
       const permanentUrl = await updateProfileImageMutation({ storageId });
-      console.log("4. Permanent URL:", permanentUrl);
-
+  
+      setAvatar(permanentUrl); // set permanent image
+      lastValidAvatar.current = permanentUrl; // update last known good
+  
     } catch (err) {
       console.error("Error uploading avatar:", err);
-      if (userProfile?.image) setAvatar(userProfile.image); // revert
+      setAvatar(lastValidAvatar.current); // revert to last known good
     } finally {
-      setUploading(false);
+      setIsUploading(false);
     }
   };
+  
 
   const handleItemUpload = async (itemId: string) => {
     try {
@@ -153,9 +155,9 @@ export default function Profile() {
 
       {/* Avatar + Completed Stats */}
       <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 20 }}>
-        <TouchableOpacity
+      <TouchableOpacity
           onPress={handleAvatarUpload}
-          disabled={uploading}
+          disabled={isUploading}
           style={{
             width: 110,
             height: 110,
@@ -166,13 +168,17 @@ export default function Profile() {
             overflow: "hidden",
             marginRight: 16,
             marginTop: -20,
-            opacity: uploading ? 0.6 : 1,
+            opacity: isUploading ? 0.6 : 1,
           }}
         >
-          {uploading ? (
+          {isUploading ? (
             <ActivityIndicator size="large" color="#6b7280" />
           ) : avatar ? (
-            <Image source={{ uri: avatar }} style={{ width: 110, height: 110, borderRadius: 55 }} />
+            <Image
+              source={{ uri: avatar }}
+              style={{ width: 110, height: 110, borderRadius: 55 }}
+              onError={() => setAvatar(lastValidAvatar.current)} // fallback if URL fails
+            />
           ) : (
             <Feather name="camera" size={28} color="#6b7280" />
           )}
